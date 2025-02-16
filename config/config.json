@@ -8,16 +8,22 @@
         "guilds": true,
         "message_content": true
     },
-    "events" : {
+    "roles" : {
+        "moderators" : 1034891815993745449,
+        "admin" : 1135627355025588374,
+        "staff" : 1135623618626338908,
+        "support" : 1034895143670644836,
+        "member" : 1340685782490419200,
+        "verified" : 1340684974369800342
+    },
+    "channel" : {
         "rules_channel_id" : 1338224430219919380,
+        "verify_channel_id" : 1338377084212609186,
         "welcome_channel_id" : 1338376280428773397,
         "leave_channel_id" : 1338376280428773397,
-        "self.channel_id" : 1338384698380128326,
-        "self.exempt_message_id" : 1340587021189779499
+        "command_channel_id" : 1338384698380128326
     },
-    "verify" : {
-        "CHANNEL_ID" : 1338377084212609186,
-        "ROLE_ID" : 1338377142563508266,
-        "RULES_CHANNEL_ID" : 1338224430219919380
+    "message" : {
+        "exempt_message_id" : 1340587021189779499
     }
   }

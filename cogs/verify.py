@@ -6,10 +6,29 @@ import json
 with open("config/config.json", "r", encoding="utf-8") as f:
     config = json.load(f)
 
-# 🔹 กำหนดค่าตัวแปรช่องและ Role ที่ต้องการให้
-CHANNEL_ID = config["verify"].get("CHANNEL_ID", False)
-ROLE_ID = config["verify"].get("ROLE_ID", False)
-RULES_CHANNEL_ID = config["verify"].get("RULES_CHANNEL_ID", False)
+# 🔹 กำหนดค่าตัวแปร
+GUILD_IDS = config.get("guild_ids", [])
+CHANNEL_ID = config["channel"].get("verify_channel_id", None)
+ROLE_IDS = [
+    config["roles"].get("verified", None),
+    config["roles"].get("member", None)
+]
+RULES_CHANNEL_ID = config["channel"].get("rules_channel_id", None)
+
+class VerifyButton(disnake.ui.View):
+    def __init__(self, roles: list, timeout=None):  # ปิด timeout
+        super().__init__(timeout=timeout)  # ไม่ให้หมดอายุ
+        self.roles = roles
+
+    @disnake.ui.button(label="✅ Verify Me!", style=disnake.ButtonStyle.success, custom_id="verify_button")
+    async def verify_callback(self, button: disnake.ui.Button, interaction: disnake.MessageInteraction):
+        member = interaction.user
+        for role in self.roles:
+            if role in member.roles:
+                return await interaction.response.send_message(f"⚠️ คุณได้รับ Role {role.mention} ไปแล้ว!", ephemeral=True)
+
+        await member.add_roles(*self.roles)
+        await interaction.response.send_message("✅ คุณได้รับ Role Verified แล้ว! ยินดีต้อนรับ!", ephemeral=True)
 
 class Verify(commands.Cog):
     def __init__(self, bot):
@@ -19,53 +38,41 @@ class Verify(commands.Cog):
     async def on_ready(self):
         print(f"📁 Loaded ({self.__class__.__name__}) Succeed.")
 
-    @commands.slash_command(description="ส่งข้อความยืนยันตัวตนไปยังห้องที่กำหนด (Admin only)")
-    async def sendverify(self, interaction: disnake.AppCmdInter):
-        guild = interaction.guild
-        channel = guild.get_channel(CHANNEL_ID)
-        role = guild.get_role(ROLE_ID)
-        rules_channel = guild.get_channel(RULES_CHANNEL_ID)
+        for guild_id in GUILD_IDS:
+            guild = self.bot.get_guild(guild_id)  # ดึง guild ตาม ID
+            if not guild:
+                print(f"❌ ไม่พบเซิร์ฟเวอร์ ID: {guild_id}")
+                return
 
-        is_admin = interaction.author.guild_permissions.administrator
-        is_owner = interaction.author.id == interaction.guild.owner_id
+            channel = guild.get_channel(CHANNEL_ID)
+            rules_channel = guild.get_channel(RULES_CHANNEL_ID)
 
-        if not is_owner and not is_admin:
-            await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้!", ephemeral=True)
-            return
+            # กรอง role ที่เป็น None ออก
+            roles = [guild.get_role(role_id) for role_id in ROLE_IDS if role_id]
+            if not channel or not roles or not rules_channel:
+                print(f"❌ ไม่พบ Channel หรือ Role ที่จำเป็นในเซิร์ฟเวอร์: {guild.name}")
+                return
 
-        class VerifyButton(disnake.ui.View):
-            def __init__(self):
-                super().__init__()
-                self.button = disnake.ui.Button(
-                    label="✅ Verify Me!",
-                    style=disnake.ButtonStyle.success,
-                    custom_id="verify_button"
-                )
-                self.button.callback = self.verify_callback
-                self.add_item(self.button)
+            embed = disnake.Embed(
+                title="🔹 ยินดีต้อนรับสู่เซิร์ฟเวอร์!",
+                description="เพื่อเข้าถึงเนื้อหาและห้องแชททั้งหมด กรุณากดยืนยันตัวตนด้านล่าง",
+                color=disnake.Color.blue()
+            )
+            embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
+            embed.add_field(name="📜 กฎของเซิร์ฟเวอร์", value=f"โปรดปฏิบัติตามกฎของเรา {rules_channel.mention}", inline=False)
+            embed.add_field(name="🎉 สิทธิพิเศษ", value="เมื่อยืนยันตัวตนแล้ว คุณจะสามารถเข้าถึงเนื้อหาและกิจกรรมต่างๆ ได้อย่างเต็มที่!", inline=False)
+            embed.set_footer(text="หากมีปัญหา โปรดติดต่อแอดมิน 👨‍💻")
 
-            async def verify_callback(self, interaction: disnake.MessageInteraction):
-                member = interaction.author
-                if role in member.roles:
-                    return await interaction.response.send_message("⚠️ คุณได้รับ Role นี้ไปแล้ว!", ephemeral=True)
+            # ตรวจสอบว่ามีข้อความที่ส่งไปแล้วในช่องนั้นไหม
+            async for message in channel.history(limit=10):
+                if message.author == self.bot.user and message.embeds:
+                    await message.edit(view=VerifyButton(roles))
+                    print(f"✅ อัปเดตปุ่มใน ({channel})")
+                    return
 
-                await member.add_roles(role)
-                await interaction.response.send_message("✅ คุณได้รับ Role Verified แล้ว! ยินดีต้อนรับ!", ephemeral=True)
-
-        view = VerifyButton()
-
-        embed = disnake.Embed(
-            title="🔹 ยินดีต้อนรับสู่เซิร์ฟเวอร์!",
-            description="เพื่อเข้าถึงเนื้อหาและห้องแชททั้งหมด กรุณากดยืนยันตัวตนด้านล่าง",
-            color=disnake.Color.blue()
-        )
-        embed.set_thumbnail(url=interaction.guild.icon.url if interaction.guild.icon else None)
-        embed.add_field(name="📜 กฎของเซิร์ฟเวอร์", value=f"โปรดปฏิบัติตามกฎของเรา {rules_channel.mention}", inline=False)
-        embed.add_field(name="🎉 สิทธิพิเศษ", value="เมื่อยืนยันตัวตนแล้ว คุณจะสามารถเข้าถึงเนื้อหาและกิจกรรมต่างๆ ได้อย่างเต็มที่!", inline=False)
-        embed.set_footer(text="หากมีปัญหา โปรดติดต่อแอดมิน 👨‍💻")
-
-        await channel.send(embed=embed, view=view)
-        await interaction.response.send_message(f"✅ ส่งข้อความยืนยันตัวตนไปยัง {channel.mention} เรียบร้อย!", ephemeral=True)
+            # ถ้าไม่มีข้อความที่มีปุ่มในช่องนั้น ให้ส่งข้อความใหม่
+            await channel.send(embed=embed, view=VerifyButton(roles))
+            print(f"✅ ส่งข้อความยืนยันตัวตนไปยัง {channel.name} เรียบร้อย!")
 
 def setup(bot):
     bot.add_cog(Verify(bot))
