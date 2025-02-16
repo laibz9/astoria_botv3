@@ -1,0 +1,11 @@
+{
+    "prefix": "$",
+    "owner_id": 1209844348099764245,
+    "guild_ids" : [1338195130699612276],
+    "intents": {
+        "messages": true,
+        "members": true,
+        "guilds": true,
+        "message_content": true
+    }
+  }
