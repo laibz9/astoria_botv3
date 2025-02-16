@@ -19,7 +19,7 @@ intents.message_content = config["intents"].get("message_content", False)
 
 # เปิดการดีบักซิงค์คำสั่ง
 command_sync_flags = commands.CommandSyncFlags.default()
-command_sync_flags.sync_commands_debug = True
+command_sync_flags.sync_commands_debug = False
 
 class astoria_bot(commands.Bot):
     def __init__(self, *args, **kwargs):

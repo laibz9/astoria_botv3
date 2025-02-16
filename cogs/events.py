@@ -2,7 +2,11 @@
 import disnake
 from disnake.ext import commands, tasks
 import datetime
+import json
 
+# โหลดคอนฟิกจาก config.json
+with open("config/config.json", "r", encoding="utf-8") as f:
+    config = json.load(f)
 
 class Events(commands.Cog):
     def __init__(self, bot):
@@ -19,8 +23,10 @@ class Events(commands.Cog):
 # Auto remove message in channel every 3 minutes
     @tasks.loop(minutes=3)  # ตั้งเวลาให้ทำงานทุกๆ 3 นาที
     async def clear_messages(self):
-        self.channel_id = 1338384698380128326  # Channel ID
-        self.exempt_message_id = 1340587021189779499  # ข้อความที่ต้องการยกเว้นจากการลบ
+        # Channel ID
+        self.channel_id = config["events"].get("self.channel_id", False)
+        # ข้อความที่ต้องการยกเว้นจากการลบ
+        self.exempt_message_id = config["events"].get("self.exempt_message_id", False)
         if self.channel_id is None:
             return
         
@@ -44,8 +50,8 @@ def setup(bot):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         print(f"➕ {member} join the server!")
-        RULES_CHANNEL_ID = 1338224430219919380
-        WELCOME_CHANNEL_ID = 1338376280428773397
+        RULES_CHANNEL_ID = config["events"].get("rules_channel_id", False)
+        WELCOME_CHANNEL_ID = config["events"].get("welcome_channel_id", False)
         channel = self.bot.get_channel(WELCOME_CHANNEL_ID)
         rules_channel = self.bot.get_channel(RULES_CHANNEL_ID)
         if channel and rules_channel:
@@ -75,7 +81,7 @@ def setup(bot):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         print(f"➖ {member} has left the server!")
-        LEAVE_CHANNEL_ID = 1338376280428773397  # ใส่ ID ของช่องที่คุณต้องการให้บอทส่งข้อความ
+        LEAVE_CHANNEL_ID = config["events"].get("leave_channel_id", False)
         channel = self.bot.get_channel(LEAVE_CHANNEL_ID)
 
         if channel:

@@ -10,11 +10,5 @@ class Utility(commands.Cog):
     async def on_ready(self):
         print(f"📁 Loaded ({self.__class__.__name__}) Succeed.")
 
-    @commands.command()
-    async def userinfo(self, ctx, member: disnake.Member = None):
-        member = member or ctx.author
-        embed = disnake.Embed(title=f"{member}", description=f"ID: {member.id}", color=disnake.Color.blue())
-        await ctx.send(embed=embed)
-
 def setup(bot):
     bot.add_cog(Utility(bot))
